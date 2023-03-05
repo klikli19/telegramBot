@@ -2,8 +2,8 @@
 
 -- changeset klikli:1
 CREATE TABLE notification_task(
-    user_id BIGINT,
-    chat_id BIGINT,
-    message TEXT,
-    time_message TIMESTAMP
+    id BIGSERIAL PRIMARY KEY ,
+    chat_id BIGINT NOT NULL ,
+    message TEXT NOT NULL ,
+    time TIMESTAMP NOT NULL
 )

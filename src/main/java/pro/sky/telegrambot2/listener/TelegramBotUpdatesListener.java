@@ -1,6 +1,7 @@
 package pro.sky.telegrambot2.listener;
 
 import com.pengrad.telegrambot.TelegramBot;
+
 import com.pengrad.telegrambot.UpdatesListener;
 import com.pengrad.telegrambot.model.Update;
 import com.pengrad.telegrambot.request.SendMessage;
@@ -21,14 +22,18 @@ import java.util.regex.Pattern;
 
 @Service
 public class TelegramBotUpdatesListener implements UpdatesListener {
-
+    private static final Pattern PATTERN = Pattern.compile("(^[a-zA-Zа-яА-Я0-9Ёё]+\")");
+    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
     private final Logger logger = LoggerFactory.getLogger(TelegramBotUpdatesListener.class);
 
-    @Autowired
-    private TelegramBot telegramBot;
-    @Autowired
-    private NotificationTaskRepository taskRepository;
-    
+    private final TelegramBot telegramBot;
+
+    private final NotificationTaskRepository taskRepository;
+
+    public TelegramBotUpdatesListener(TelegramBot telegramBot, NotificationTaskRepository taskRepository) {
+        this.telegramBot = telegramBot;
+        this.taskRepository = taskRepository;
+    }
 
     @PostConstruct
     public void init() {
@@ -37,29 +42,27 @@ public class TelegramBotUpdatesListener implements UpdatesListener {
 
     @Override
     public int process(List<Update> updates) {
-        updates.forEach(this::accept);
-        return UpdatesListener.CONFIRMED_UPDATES_ALL;
-    }
+        updates.forEach(update -> {
+            logger.info("Processing update: {}", update);
 
-    private void accept(Update update) {
-        logger.info("Processing update: {}", update);
-        SendMessage greeting = new SendMessage(update.message().chat().id(), "Хай, пипл");
-        String textMessage = update.message().text();
+            String textMessage = update.message().text();
 
-        if (textMessage != null && update.message().text().equals("/start")) {
-            telegramBot.execute(greeting);
-        } else {
-            Pattern pattern = Pattern.compile("([0-9.\\:\\s]{16})(\\s)([\\W+]+)");
-            NotificationTask notificationTask = new NotificationTask();
-            assert textMessage != null;
-            Matcher matcher = pattern.matcher(textMessage);
-            if (matcher.matches()) {
-                notificationTask.setChatId((update.message().chat().id()));
-                notificationTask.setTimeMessage(Timestamp.valueOf(LocalDateTime.parse(matcher.group(1),
-                        DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"))).toLocalDateTime());
-                notificationTask.setMessage(matcher.group(3));
-                taskRepository.save(notificationTask);
+            if (update.message().text().equals("/start")) {
+                SendMessage greeting = new SendMessage(update.message().chat().id(), "Хай, пипл");
+                telegramBot.execute(greeting);
+            } else {
+                Matcher matcher = PATTERN.matcher(textMessage);
+                if (matcher.matches()) {
+                    LocalDateTime localDateTime = LocalDateTime.parse(matcher.group(1), DATE_TIME_FORMATTER);
+                    String text = matcher.group(3);
+                    NotificationTask notificationTask = new NotificationTask();
+                    notificationTask.setChatId(update.message().chat().id());
+                    notificationTask.setTime(localDateTime);
+                    notificationTask.setMessage(text);
+                    taskRepository.save(notificationTask);
+                }
             }
-        }
+        });
+        return UpdatesListener.CONFIRMED_UPDATES_ALL;
     }
 }
