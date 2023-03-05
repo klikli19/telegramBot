@@ -7,13 +7,11 @@ import com.pengrad.telegrambot.model.Update;
 import com.pengrad.telegrambot.request.SendMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import pro.sky.telegrambot2.entity.NotificationTask;
 import pro.sky.telegrambot2.repository.NotificationTaskRepository;
 
 import javax.annotation.PostConstruct;
-import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -22,7 +20,7 @@ import java.util.regex.Pattern;
 
 @Service
 public class TelegramBotUpdatesListener implements UpdatesListener {
-    private static final Pattern PATTERN = Pattern.compile("(^[a-zA-Zа-яА-Я0-9Ёё]+\")");
+    private static final Pattern PATTERN = Pattern.compile("([0-9\\.\\:\\s]{16})(\\s)([\\W+]+)");
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
     private final Logger logger = LoggerFactory.getLogger(TelegramBotUpdatesListener.class);
 
@@ -48,11 +46,12 @@ public class TelegramBotUpdatesListener implements UpdatesListener {
             String textMessage = update.message().text();
 
             if (update.message().text().equals("/start")) {
-                SendMessage greeting = new SendMessage(update.message().chat().id(), "Хай, пипл");
+                SendMessage greeting = new SendMessage(update.message().chat().id(), "Привет. Это бот для уведомлений." +
+                        "Введите заметку в формате: дд.мм.гггг чч:мм задача");
                 telegramBot.execute(greeting);
             } else {
                 Matcher matcher = PATTERN.matcher(textMessage);
-                if (matcher.matches()) {
+                if (matcher.find()) {
                     LocalDateTime localDateTime = LocalDateTime.parse(matcher.group(1), DATE_TIME_FORMATTER);
                     String text = matcher.group(3);
                     NotificationTask notificationTask = new NotificationTask();
@@ -60,6 +59,8 @@ public class TelegramBotUpdatesListener implements UpdatesListener {
                     notificationTask.setTime(localDateTime);
                     notificationTask.setMessage(text);
                     taskRepository.save(notificationTask);
+                    SendMessage textMessage1 = new SendMessage(update.message().chat().id(), "Задача сохранена");
+                    telegramBot.execute(textMessage1);
                 }
             }
         });

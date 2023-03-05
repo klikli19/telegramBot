@@ -8,14 +8,18 @@ import static javax.persistence.GenerationType.AUTO;
 import static javax.persistence.GenerationType.IDENTITY;
 
 @Entity
+@Table(name = "notification_task")
 public class NotificationTask {
     @Id
     @GeneratedValue(strategy = IDENTITY)
-    private Long id;
+    @Column(name = "id", nullable = false)
+    private Integer id;
 
+    @Column(name = "chat_id", nullable = false)
     private Long chatId;
-
+    @Column(name = "message", nullable = false)
     private String message;
+    @Column(name = "time", nullable = false)
     private LocalDateTime time;
 
 
@@ -23,11 +27,11 @@ public class NotificationTask {
     public NotificationTask() {
     }
 
-    public Long getId() {
+    public Integer getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(Integer id) {
         this.id = id;
     }
 
